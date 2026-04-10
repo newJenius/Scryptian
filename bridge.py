@@ -10,7 +10,7 @@ OLLAMA_PORT = 11434
 OLLAMA_URL = f"{OLLAMA_HOST}:{OLLAMA_PORT}/api/generate"
 
 # ── Model settings ──
-MODEL = "phi3:mini"
+MODEL = "qwen2.5:3b"
 TEMPERATURE = 0
 KEEP_ALIVE = "30m"
 
@@ -39,3 +39,34 @@ def generate(prompt: str) -> str:
         return "[Scryptian Error] Ollama did not respond in time (timeout 120s)."
     except Exception as e:
         return f"[Scryptian Error] {e}"
+
+
+def generate_stream(prompt: str):
+    """
+    Streaming LLM call. Yields text chunks as they arrive.
+    """
+    payload = {
+        "model": MODEL,
+        "prompt": prompt,
+        "temperature": TEMPERATURE,
+        "keep_alive": KEEP_ALIVE,
+        "stream": True,
+    }
+
+    try:
+        response = requests.post(OLLAMA_URL, json=payload, timeout=120, stream=True)
+        response.raise_for_status()
+        for line in response.iter_lines():
+            if line:
+                data = json.loads(line)
+                chunk = data.get("response", "")
+                if chunk:
+                    yield chunk
+                if data.get("done", False):
+                    break
+    except requests.ConnectionError:
+        yield "[Scryptian Error] Could not connect to Ollama. Make sure the server is running."
+    except requests.Timeout:
+        yield "[Scryptian Error] Ollama did not respond in time (timeout 120s)."
+    except Exception as e:
+        yield f"[Scryptian Error] {e}"

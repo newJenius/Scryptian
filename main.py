@@ -10,6 +10,7 @@ import tkinter as tk
 import ctypes
 import pyperclip
 import keyboard
+import bridge
 
 
 # ── DPI (crisp rendering on Windows) ──
@@ -334,18 +335,77 @@ class ScryptianBar:
 
         def execute():
             try:
-                result = plugin["module"].run(input_text)
-                if result:
-                    self.last_result = result
-                    self.has_result = True
-                    self.root.after(0, lambda: self._show_result(result))
-                    print(f"[Scryptian] Done!")
+                mod = plugin["module"]
+                if hasattr(mod, "prompt"):
+                    # Streaming mode
+                    p = mod.prompt(input_text)
+                    full_text = ""
+                    for chunk in bridge.generate_stream(p):
+                        full_text += chunk
+                        text_snapshot = full_text
+                        self.root.after(0, lambda t=text_snapshot: self._update_stream(t))
+                    if full_text.strip():
+                        self.last_result = full_text.strip()
+                        self.has_result = True
+                        self.root.after(0, lambda: self._finish_stream())
+                        print(f"[Scryptian] Done!")
+                    else:
+                        self.root.after(0, lambda: self._show_result("Plugin returned an empty result."))
                 else:
-                    self.root.after(0, lambda: self._show_result("Plugin returned an empty result."))
+                    # Fallback: non-streaming
+                    result = mod.run(input_text)
+                    if result:
+                        self.last_result = result
+                        self.has_result = True
+                        self.root.after(0, lambda: self._show_result(result))
+                        print(f"[Scryptian] Done!")
+                    else:
+                        self.root.after(0, lambda: self._show_result("Plugin returned an empty result."))
             except Exception as e:
                 self.root.after(0, lambda: self._show_result(f"Error: {e}"))
 
         threading.Thread(target=execute, daemon=True).start()
+
+    def _update_stream(self, text):
+        """Updates result box with streaming text in real-time."""
+        if not self.window:
+            return
+
+        self.separator.pack_forget()
+        self.result_box.pack_forget()
+        self.hint_label.pack_forget()
+
+        self.result_box.config(state="normal")
+        self.result_box.delete("1.0", tk.END)
+        self.result_box.insert("1.0", text)
+        self.result_box.config(state="disabled")
+        self.result_box.see(tk.END)
+
+        chars_per_line = 60
+        visual_lines = 0
+        for line in text.split("\n"):
+            visual_lines += max(1, (len(line) // chars_per_line) + 1)
+
+        max_lines = 20
+        clamped = min(visual_lines, max_lines)
+        clamped = max(clamped, 2)
+
+        self.separator.pack(fill="x", padx=8, pady=(4, 0))
+        self.result_box.config(height=clamped)
+        self.result_box.pack(fill="x", padx=10, pady=(4, 4))
+
+        self.window.update_idletasks()
+        needed = self.container.winfo_reqheight()
+        self._resize(needed + 4)
+
+    def _finish_stream(self):
+        """Called when streaming is complete — shows hint label."""
+        if not self.window:
+            return
+        self.hint_label.pack(fill="x", padx=12, pady=(0, 6))
+        self.window.update_idletasks()
+        needed = self.container.winfo_reqheight()
+        self._resize(needed + 4)
 
     def _show_result(self, text):
         """Shows result below the bar, dynamically expanding the window."""

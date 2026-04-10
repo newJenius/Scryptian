@@ -5,13 +5,16 @@
 import bridge
 
 
-def run(text):
-    """
-    text: log or error message from clipboard
-    """
-    prompt = (
+def prompt(text):
+    return (
         "Explain the following error or log message in plain language. "
         "What happened, why, and how to fix it:\n\n"
         f"{text}"
     )
-    return bridge.generate(prompt)
+
+
+def run(text):
+    """
+    text: log or error message from clipboard
+    """
+    return bridge.generate(prompt(text))

@@ -12,14 +12,14 @@ How it works?
 Stack
 
 Python + tkinter (zero external UI deps)
-Ollama (local LLM backend, default model: `phi3:mini`)
+Ollama (local LLM backend, default model: `qwen2.5:3b`)
 Modular plugin system — one file = one command
 
 Setup
 
 ```bash
 # 1. Install Ollama and pull the model
-ollama pull phi3:mini
+ollama pull qwen2.5:3b
 
 # 2. Install Python dependencies
 pip install -r requirements.txt
