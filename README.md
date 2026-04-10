@@ -2,6 +2,9 @@ Scryptian v0.1. (Proof of Concept)
 
 Local AI-powered command bar for Windows & Linux. Like Raycast, but absolutely free because local llm.
 
+![Uploading Scryptian Demo.gif…]()
+
+
 How it works?
 
 1. Press `Ctrl+Alt` - command bar appears
