@@ -1,5 +1,5 @@
 # @title: Improve Text
-# @description: Rewrites text to sound more professional and polished.
+# @description: Rewrite text cleaner & more professional
 # @author: Scryptian
 
 import bridge

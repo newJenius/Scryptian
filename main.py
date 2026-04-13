@@ -7,20 +7,25 @@ import re
 import importlib.util
 import threading
 import tkinter as tk
-import ctypes
 import pyperclip
 import keyboard
 import bridge
 
+IS_WINDOWS = sys.platform == "win32"
+
+if IS_WINDOWS:
+    import ctypes
+
 
 # ── DPI (crisp rendering on Windows) ──
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except Exception:
+if IS_WINDOWS:
     try:
-        ctypes.windll.user32.SetProcessDPIAware()
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except Exception:
-        pass
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
 
 # ── Settings ──
 HOTKEY = "ctrl+alt"
@@ -99,6 +104,8 @@ class ScryptianBar:
         self.visible = False
         self.has_result = False
         self.last_result = ""
+        self.processing = False
+        self.pending_result = None
 
     def toggle(self):
         """Show/hide the bar (called from any thread)."""
@@ -200,27 +207,47 @@ class ScryptianBar:
 
         self.visible = True
         self.selected_index = 0
-        self.has_result = False
-        self.last_result = ""
-        self._update_filter("")
+
+        # If there's a pending result from a background task, show it
+        if self.pending_result is not None:
+            self.has_result = True
+            self.last_result = self.pending_result
+            self.pending_result = None
+            self.processing = False
+            self.listbox.pack_forget()
+            self.entry.config(state="disabled")
+            self._show_result(self.last_result)
+        else:
+            self.has_result = False
+            self.last_result = ""
+            self._update_filter("")
 
         self.window.after(50, self._force_focus)
 
-    def _force_focus(self):
-        """Force focus via Windows API."""
+    def _force_focus(self, attempt=0):
+        """Force focus — Windows API on Win, fallback on Linux/Mac."""
         if not self.window:
             return
-        try:
-            hwnd = ctypes.windll.user32.GetForegroundWindow()
-            tid_current = ctypes.windll.kernel32.GetCurrentThreadId()
-            tid_foreground = ctypes.windll.user32.GetWindowThreadProcessId(hwnd, None)
-            ctypes.windll.user32.AttachThreadInput(tid_foreground, tid_current, True)
-            self.window.focus_force()
-            self.entry.focus_set()
-            ctypes.windll.user32.AttachThreadInput(tid_foreground, tid_current, False)
-        except Exception:
-            self.window.focus_force()
-            self.entry.focus_set()
+
+        if IS_WINDOWS:
+            try:
+                hwnd = int(self.window.wm_frame(), 16)
+                fg = ctypes.windll.user32.GetForegroundWindow()
+                tid_fg = ctypes.windll.user32.GetWindowThreadProcessId(fg, None)
+                tid_self = ctypes.windll.kernel32.GetCurrentThreadId()
+                ctypes.windll.user32.AttachThreadInput(tid_fg, tid_self, True)
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+                ctypes.windll.user32.BringWindowToTop(hwnd)
+                ctypes.windll.user32.AttachThreadInput(tid_fg, tid_self, False)
+            except Exception:
+                pass
+
+        self.window.focus_force()
+        self.entry.focus_set()
+
+        # Retry up to 3 times — sometimes OS delays focus
+        if attempt < 3:
+            self.window.after(80, lambda: self._force_focus(attempt + 1))
 
     def _on_focus_out(self, event):
         """Close only if focus left the window."""
@@ -331,6 +358,7 @@ class ScryptianBar:
         self.entry.config(state="disabled")
         self._show_result(f"⚙ {plugin['title']}  —  processing...")
 
+        self.processing = True
         print(f"[Scryptian] Running: {plugin['title']}...")
 
         def execute():
@@ -344,21 +372,34 @@ class ScryptianBar:
                         full_text += chunk
                         text_snapshot = full_text
                         self.root.after(0, lambda t=text_snapshot: self._update_stream(t))
-                    if full_text.strip():
-                        self.last_result = full_text.strip()
-                        self.has_result = True
-                        self.root.after(0, lambda: self._finish_stream())
+                    stripped = full_text.strip()
+                    self.processing = False
+                    if stripped and not stripped.startswith("[Scryptian Error]"):
+                        if self.window and self.visible:
+                            self.last_result = stripped
+                            self.has_result = True
+                            self.root.after(0, lambda: self._finish_stream())
+                        else:
+                            self.pending_result = stripped
                         print(f"[Scryptian] Done!")
+                    elif stripped.startswith("[Scryptian Error]"):
+                        self.root.after(0, lambda t=stripped: self._show_result(t))
                     else:
                         self.root.after(0, lambda: self._show_result("Plugin returned an empty result."))
                 else:
                     # Fallback: non-streaming
                     result = mod.run(input_text)
-                    if result:
-                        self.last_result = result
-                        self.has_result = True
-                        self.root.after(0, lambda: self._show_result(result))
+                    self.processing = False
+                    if result and not result.startswith("[Scryptian Error]"):
+                        if self.window and self.visible:
+                            self.last_result = result
+                            self.has_result = True
+                            self.root.after(0, lambda: self._show_result(result))
+                        else:
+                            self.pending_result = result
                         print(f"[Scryptian] Done!")
+                    elif result and result.startswith("[Scryptian Error]"):
+                        self.root.after(0, lambda: self._show_result(result))
                     else:
                         self.root.after(0, lambda: self._show_result("Plugin returned an empty result."))
             except Exception as e:
@@ -459,6 +500,15 @@ def main():
         print(f"  → {p['title']}: {p['description']}")
 
     print(f"\n[Scryptian] Plugins loaded: {len(plugins)}")
+
+    # Check Ollama connection
+    try:
+        import requests as _req
+        _req.get(f"http://localhost:11434/api/tags", timeout=3)
+        print(f"[Scryptian] Ollama: connected (model: {bridge.MODEL})")
+    except Exception:
+        print("[Scryptian] WARNING: Ollama is not running. Start it before using plugins.")
+
     print(f"[Scryptian] Hotkey: {HOTKEY}")
     print("[Scryptian] Waiting...")
 
@@ -470,7 +520,15 @@ def main():
 
     keyboard.add_hotkey(HOTKEY, bar.toggle)
 
-    root.mainloop()
+    import signal
+    signal.signal(signal.SIGINT, lambda *_: root.quit())
+
+    try:
+        root.mainloop()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print("\n[Scryptian] Stopped.")
 
 
 if __name__ == "__main__":

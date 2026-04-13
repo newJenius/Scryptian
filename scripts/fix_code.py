@@ -1,5 +1,5 @@
 # @title: Fix Code
-# @description: Automatically repairs syntax and logical errors in code snippets.
+# @description: Fix syntax & logic errors in code
 # @author: Scryptian
 
 import bridge

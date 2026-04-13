@@ -24,6 +24,9 @@ Setup
 # 1. Install Ollama and pull the model
 ollama pull qwen2.5:3b
 
+#if already installed
+ollama run qwen2.5:3b
+
 # 2. Install Python dependencies
 pip install -r requirements.txt
 
@@ -38,10 +41,14 @@ scryptian/
 ├── main.py            # Core: plugin scanner, hotkey listener, UI
 ├── bridge.py          # Connector to Ollama (settings, generate())
 ├── requirements.txt
+├── LICENSE
 └── scripts/
-    ├── fix_code.py        # Fix code errors
-    ├── explain_log.py     # Explain logs/errors
-    └── improve_text.py    # Make text more professional
+    ├── fix_code.py        # Fix syntax & logic errors in code
+    ├── improve_text.py    # Rewrite text cleaner & more professional
+    ├── json_format.py     # Fix & pretty-print broken JSON
+    ├── camel.py           # text → camelCase
+    ├── snake.py           # text → snake_case
+    └── slug.py            # text → url-slug
 ```
 
 

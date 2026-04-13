@@ -34,7 +34,7 @@ def generate(prompt: str) -> str:
         data = response.json()
         return data.get("response", "").strip()
     except requests.ConnectionError:
-        return "[Scryptian Error] Could not connect to Ollama. Make sure the server is running."
+        return f"[Scryptian Error] Could not connect to Ollama. Make sure the server is running.\n\nollama run {MODEL}"
     except requests.Timeout:
         return "[Scryptian Error] Ollama did not respond in time (timeout 120s)."
     except Exception as e:
@@ -65,7 +65,7 @@ def generate_stream(prompt: str):
                 if data.get("done", False):
                     break
     except requests.ConnectionError:
-        yield "[Scryptian Error] Could not connect to Ollama. Make sure the server is running."
+        yield f"[Scryptian Error] Could not connect to Ollama. Make sure the server is running.\n\nollama run {MODEL}"
     except requests.Timeout:
         yield "[Scryptian Error] Ollama did not respond in time (timeout 120s)."
     except Exception as e:
