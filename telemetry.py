@@ -30,23 +30,26 @@ def _os_info():
 def send(event: str, properties: dict = None):
     """Send event to PostHog in a background thread."""
     def _post():
-        try:
-            body = json.dumps({
-                "api_key": POSTHOG_KEY,
-                "event": event,
-                "distinct_id": _get_id(),
-                "properties": {
-                    "os": _os_info(),
-                    **(properties or {}),
-                },
-            }).encode()
-            req = request.Request(
-                f"{POSTHOG_HOST}/capture/",
-                data=body,
-                headers={"Content-Type": "application/json"},
-            )
-            request.urlopen(req, timeout=5)
-        except Exception:
-            pass  # Silent fail — never block the app
+        import time
+        body = json.dumps({
+            "api_key": POSTHOG_KEY,
+            "event": event,
+            "distinct_id": _get_id(),
+            "properties": {
+                "os": _os_info(),
+                **(properties or {}),
+            },
+        }).encode()
+        for attempt in range(3):
+            try:
+                req = request.Request(
+                    f"{POSTHOG_HOST}/capture/",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                )
+                request.urlopen(req, timeout=5)
+                break
+            except Exception:
+                time.sleep(5)  # Retry after 5s (network may not be ready)
 
     threading.Thread(target=_post, daemon=True).start()

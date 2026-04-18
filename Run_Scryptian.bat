@@ -39,16 +39,14 @@ REM -- Add to Startup --
 set "STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 set "SHORTCUT=%STARTUP%\Scryptian.bat"
 
-if not exist "%SHORTCUT%" (
-    (
-        echo @echo off
-        echo cd /d "%~dp0"
-        echo start "" pythonw "%~dp0main.py"
-    ) > "%SHORTCUT%"
-    echo  [OK] Added to Startup - Scryptian will run on boot.
-) else (
-    echo  [OK] Already in Startup.
-)
+(
+    echo @echo off
+    echo powershell -Command "Start-Process ollama -ArgumentList 'serve' -WindowStyle Hidden" ^>nul 2^>^&1
+    echo timeout /t 5 /nobreak ^>nul
+    echo cd /d "%~dp0"
+    echo start "" pythonw "%~dp0main.py"
+) > "%SHORTCUT%"
+echo  [OK] Startup updated.
 
 REM -- Start Ollama --
 echo  [..] Starting Ollama...
