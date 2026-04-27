@@ -50,7 +50,8 @@ scryptian/
     ├── json_format.py     # Fix & pretty-print broken JSON
     ├── camel.py           # text → camelCase
     ├── snake.py           # text → snake_case
-    └── slug.py            # text → url-slug
+    ├── slug.py            # text → url-slug
+    └── translate.py       # Translate to your system language
 ```
 
 
