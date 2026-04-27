@@ -10,6 +10,7 @@ _llm = None
 def _download_model(on_progress=None):
     """Download GGUF model from HuggingFace using stdlib only."""
     from urllib import request
+    import ssl
     import shutil
 
     os.makedirs(MODELS_DIR, exist_ok=True)
@@ -19,7 +20,8 @@ def _download_model(on_progress=None):
         on_progress("Downloading Qwen2.5-3B for AI skills (~2GB, one time only)...")
 
     try:
-        with request.urlopen(MODEL_URL, timeout=600) as resp:
+        ctx = ssl.create_default_context()
+        with request.urlopen(MODEL_URL, timeout=600, context=ctx) as resp:
             total = int(resp.headers.get("Content-Length", 0))
             downloaded = 0
             with open(tmp_path, "wb") as f:
@@ -90,7 +92,7 @@ def generate(prompt: str) -> str:
     try:
         llm = _get_llm()
         if llm is None:
-            return "[Scryptian Error] Model not found. Run Run_Scryptian.bat to download it."
+            return "[Scryptian Error] Model download failed. Check your internet connection and try again."
 
         result = llm.create_chat_completion(
             messages=_messages(prompt),
@@ -109,7 +111,7 @@ def generate_stream(prompt: str):
     try:
         llm = _get_llm()
         if llm is None:
-            yield "[Scryptian Error] Model not found. Run Run_Scryptian.bat to download it."
+            yield "[Scryptian Error] Model download failed. Check your internet connection and try again."
             return
 
         for chunk in llm.create_chat_completion(
