@@ -22,7 +22,7 @@ def enable():
 
 
 def is_enabled():
-    """Check if Scryptian is in startup."""
+    """Check if Scryptian is in startup with correct path."""
     if IS_WINDOWS:
         return _is_enabled_windows()
     return False
@@ -41,14 +41,14 @@ def _enable_windows():
 
 
 def _is_enabled_windows():
-    """Check if registry entry exists."""
+    """Check if registry entry exists with correct path."""
     import winreg
     key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
     try:
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ)
-        winreg.QueryValueEx(key, "Scryptian")
+        value, _ = winreg.QueryValueEx(key, "Scryptian")
         winreg.CloseKey(key)
-        return True
+        return value == _get_exe_path()
     except Exception:
         return False
 
