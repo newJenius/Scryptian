@@ -115,6 +115,7 @@ class ScryptianBar:
 
     def toggle(self):
         """Show/hide the bar (called from any thread)."""
+        telemetry.send("hotkey_pressed")
         self.root.after(0, self._do_toggle)
 
     def _do_toggle(self):

@@ -16,6 +16,9 @@ def _download_model(on_progress=None):
     os.makedirs(MODELS_DIR, exist_ok=True)
     tmp_path = MODEL_PATH + ".part"
 
+    import telemetry
+    telemetry.send("model_download_started")
+
     if on_progress:
         on_progress("Downloading Qwen2.5-3B for AI skills (~2GB, one time only)...")
 
@@ -42,12 +45,14 @@ def _download_model(on_progress=None):
                         if on_progress:
                             on_progress(f"Downloading Qwen2.5-3B... {pct}%  ({mb_done}/{mb_total} MB)")
         shutil.move(tmp_path, MODEL_PATH)
+        telemetry.send("model_download_finished")
         if on_progress:
             on_progress("Download complete. Preparing model...")
         return True
     except Exception as e:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+        telemetry.send("model_download_failed", {"error": str(e)})
         if on_progress:
             on_progress(f"[Scryptian Error] Download failed: {e}")
         return False

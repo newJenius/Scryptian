@@ -40,6 +40,12 @@ def send(event: str, properties: dict = None):
                 **(properties or {}),
             },
         }).encode()
+        import ssl
+        try:
+            import certifi
+            ctx = ssl.create_default_context(cafile=certifi.where())
+        except ImportError:
+            ctx = ssl.create_default_context()
         for attempt in range(3):
             try:
                 req = request.Request(
@@ -47,7 +53,7 @@ def send(event: str, properties: dict = None):
                     data=body,
                     headers={"Content-Type": "application/json"},
                 )
-                request.urlopen(req, timeout=5)
+                request.urlopen(req, timeout=5, context=ctx)
                 break
             except Exception:
                 time.sleep(5)  # Retry after 5s (network may not be ready)
