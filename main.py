@@ -629,7 +629,7 @@ def main():
 
     if not autostart.is_enabled():
         autostart.enable()
-        print("[Scryptian] Added to startup.")
+        print("[Scryptian] Autostart updated.")
 
     tray.start(on_quit=root.quit)
 

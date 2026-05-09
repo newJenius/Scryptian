@@ -16,12 +16,29 @@ def _bundled_skills_dir():
 
 
 def setup():
-    """Extract bundled skills to external folder on first run."""
-    if os.path.isdir(SKILLS_DIR):
-        return  # Already exists, nothing to do
-
+    """Sync bundled skills to external folder: add new, update existing, remove obsolete."""
     bundled = _bundled_skills_dir()
-    if bundled and os.path.isdir(bundled):
-        shutil.copytree(bundled, SKILLS_DIR)
-    else:
+
+    if not bundled or not os.path.isdir(bundled):
         os.makedirs(SKILLS_DIR, exist_ok=True)
+        return
+
+    os.makedirs(SKILLS_DIR, exist_ok=True)
+
+    bundled_files = set(f for f in os.listdir(bundled) if f.endswith(".py"))
+
+    # Copy/update bundled skills
+    for fname in bundled_files:
+        src = os.path.join(bundled, fname)
+        dst = os.path.join(SKILLS_DIR, fname)
+        shutil.copy2(src, dst)
+
+    # Remove skills that are no longer bundled (skip user-created ones with custom marker)
+    for fname in os.listdir(SKILLS_DIR):
+        if fname.endswith(".py") and fname not in bundled_files:
+            filepath = os.path.join(SKILLS_DIR, fname)
+            # Keep files with @author other than Scryptian (user-created)
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                header = f.read(512)
+            if "@author: Scryptian" in header:
+                os.remove(filepath)
