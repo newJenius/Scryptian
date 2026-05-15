@@ -255,7 +255,7 @@ class ScryptianBar:
         self.window.after(50, self._force_focus)
 
     def _force_focus(self, attempt=0):
-        """Force focus — Windows API on Win, fallback on Linux/Mac."""
+        """Force focus via Windows API."""
         if not self.window:
             return
 
@@ -626,6 +626,17 @@ def main():
     bar = ScryptianBar(root, skills)
 
     keyboard.add_hotkey(HOTKEY, bar.toggle)
+
+    def _rehook():
+        """Re-register hotkey periodically to survive sleep/hibernate."""
+        try:
+            keyboard.remove_hotkey(HOTKEY)
+        except Exception:
+            pass
+        keyboard.add_hotkey(HOTKEY, bar.toggle)
+        root.after(300000, _rehook)  # every 5 minutes
+
+    root.after(300000, _rehook)
 
     if not autostart.is_enabled():
         autostart.enable()
