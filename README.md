@@ -1,4 +1,6 @@
-Scryptian v0.2. (added one click start .bat file)
+Scryptian v0.3
+
+https://adrianium.github.io/Scryptian/ (website)
 
 Local AI Skills command bar for Windows & Linux. Like Raycast and Spotlight, but absolutely free because local llm.
 (works with text from clipboard)
